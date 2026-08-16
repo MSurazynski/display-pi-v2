@@ -29,12 +29,24 @@ pub fn bytes_to_pixmap(image_bytes: &[u8]) -> Pixmap {
 
 pub fn rotate_to_vertical(pixmap: &mut Pixmap) {
     if pixmap.width() > pixmap.height() {
-        rotate_by_degrees(pixmap, 90);
+        let mut canvas = Pixmap::new(pixmap.height(), pixmap.width()).unwrap();
+        let paint = PixmapPaint::default();
+        let transform =
+            tiny_skia::Transform::from_rotate(90.0).post_translate(canvas.width() as f32, 0.0);
+        canvas.draw_pixmap(0, 0, pixmap.as_ref(), &paint, transform, None);
+        *pixmap = canvas;
     }
 }
 
 pub fn rotate_by_degrees(pixmap: &mut Pixmap, degree: i32) {
-    let mut canvas = Pixmap::new(pixmap.width(), pixmap.height()).unwrap();
+    // For 90/270, the output dimensions are swapped.
+    let (new_w, new_h) = if degree == 90 || degree == 270 {
+        (pixmap.height(), pixmap.width())
+    } else {
+        (pixmap.width(), pixmap.height())
+    };
+
+    let mut canvas = Pixmap::new(new_w, new_h).unwrap();
 
     let center_x = pixmap.width() / 2;
     let center_y = pixmap.height() / 2;
