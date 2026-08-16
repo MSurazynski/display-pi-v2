@@ -35,6 +35,74 @@ pub fn convert_pixmap_to_epaper_pallete(pixmap: &mut tiny_skia::Pixmap) {
     }
 }
 
+fn nearest_palette(color: &[f32; 3]) -> [u8; 3] {
+    EPAPER_PALETTE
+        .iter()
+        .min_by_key(|c| {
+            let dr = color[0] - c[0] as f32;
+            let dg = color[1] - c[1] as f32;
+            let db = color[2] - c[2] as f32;
+            (dr * dr + dg * dg + db * db) as i32
+        })
+        .copied()
+        .unwrap()
+}
+
+pub fn floyd_steinberg(pixmap: &mut tiny_skia::Pixmap) {
+    let width = pixmap.width() as i32;
+    let height = pixmap.height() as i32;
+
+    // Error buffer in f32, one [r,g,b] triple per pixel.
+    let mut errors = vec![[0f32; 3]; (width * height) as usize];
+
+    let data = pixmap.data_mut();
+
+    for y in 0..height {
+        for x in 0..width {
+            let pixel_idx = (y * width + x) as usize;
+            let byte_idx = pixel_idx * 4; // RGBA, 4 bytes per pixel
+
+            let err = errors[pixel_idx];
+
+            // Current value + accumulated error, clamped to [0, 255].
+            let current = [
+                (data[byte_idx] as f32 + err[0]).clamp(0.0, 255.0),
+                (data[byte_idx + 1] as f32 + err[1]).clamp(0.0, 255.0),
+                (data[byte_idx + 2] as f32 + err[2]).clamp(0.0, 255.0),
+            ];
+
+            // Find nearest palette color.
+            let nearest = nearest_palette(&current);
+
+            // Write it back (keep alpha opaque).
+            data[byte_idx] = nearest[0];
+            data[byte_idx + 1] = nearest[1];
+            data[byte_idx + 2] = nearest[2];
+            data[byte_idx + 3] = 255;
+
+            // Quantization error to diffuse.
+            let quant_err = [
+                current[0] - nearest[0] as f32,
+                current[1] - nearest[1] as f32,
+                current[2] - nearest[2] as f32,
+            ];
+
+            let mut spread = |nx: i32, ny: i32, factor: f32| {
+                if nx >= 0 && nx < width && ny >= 0 && ny < height {
+                    let nidx = (ny * width + nx) as usize;
+                    errors[nidx][0] += quant_err[0] * factor;
+                    errors[nidx][1] += quant_err[1] * factor;
+                    errors[nidx][2] += quant_err[2] * factor;
+                }
+            };
+
+            spread(x + 1, y, 7.0 / 16.0);
+            spread(x - 1, y + 1, 3.0 / 16.0);
+            spread(x, y + 1, 5.0 / 16.0);
+            spread(x + 1, y + 1, 1.0 / 16.0);
+        }
+    }
+}
 struct EpaperColorMap;
 
 impl EpaperColorMap {
