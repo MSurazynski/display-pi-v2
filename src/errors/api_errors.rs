@@ -17,3 +17,14 @@ impl From<std::io::Error> for NasaError {
         NasaError::Io(value)
     }
 }
+
+#[derive(Debug)]
+pub enum TasksError {
+    Request(reqwest::Error),
+}
+
+impl From<reqwest::Error> for TasksError {
+    fn from(value: reqwest::Error) -> Self {
+        TasksError::Request(value)
+    }
+}
