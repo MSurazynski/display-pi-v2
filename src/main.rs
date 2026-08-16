@@ -6,7 +6,11 @@ mod storage;
 mod types;
 use std::time::Duration;
 
-use crate::{storage::does_nasa_image_exist, types::ImageType};
+use crate::{
+    api::tasks::{fetch_all_tasks, fetch_tasks_due_today},
+    storage::does_nasa_image_exist,
+    types::ImageType,
+};
 use chrono::{Local, Timelike};
 use render::dashboard::render_dashboard_svg;
 use reqwest::Client;
@@ -64,20 +68,28 @@ async fn main() {
 
     // render_dashboard_svg();
 
-    print!("Started");
+    println!("Started");
+    // run_nasa_task().await;
+    let client = Client::new();
+    let todoist_url = "https://api.todoist.com/api/v1/tasks";
+    let api_key = "82fe982a94f66c098447ac908a0939e505c24dea";
 
-    loop {
-        let wait_time = get_duration_till_next_run();
-        println!("Next run in {:?} hours", wait_time / 3600);
+    fetch_tasks_due_today(&client, todoist_url, api_key)
+        .await
+        .unwrap();
 
-        tokio::select! {
-            _ = sleep(wait_time) => {
-                run_nasa_task().await;
-            }
-            _ = tokio::signal::ctrl_c() => {
-                println!("Shutdown signal received, exiting");
-                break;
-            }
-        }
-    }
+    // loop {
+    //     let wait_time = get_duration_till_next_run();
+    //     println!("Next run in {:?} hours", wait_time / 3600);
+    //
+    //     tokio::select! {
+    //         _ = sleep(wait_time) => {
+    //             run_nasa_task().await;
+    //         }
+    //         _ = tokio::signal::ctrl_c() => {
+    //             println!("Shutdown signal received, exiting");
+    //             break;
+    //         }
+    //     }
+    // }
 }
