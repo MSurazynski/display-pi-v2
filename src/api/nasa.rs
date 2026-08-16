@@ -65,6 +65,8 @@ pub async fn fetch_nasa_image_with_retries(
     Ok(bytes)
 }
 
+// ----------------- TESTS -------------------
+
 #[cfg(test)]
 mod tests {
     use super::*;
