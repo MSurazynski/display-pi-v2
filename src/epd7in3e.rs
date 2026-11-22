@@ -37,6 +37,26 @@ pub enum EpdError {
     Spi(#[from] rppal::spi::Error),
     #[error("display stayed busy for too long")]
     BusyTimeout,
+    #[error("image: {0}")]
+    Image(#[from] image::ImageError),
+    #[error("expected a 480x800 image, got {width}x{height}")]
+    WrongImageSize { width: u32, height: u32 },
+    #[error("pixel ({x}, {y}) has color {rgb:?}, which is not one of the 6 panel colors")]
+    NotDithered { x: u32, y: u32, rgb: [u8; 3] },
+}
+
+impl Color {
+    fn from_rgb(rgb: [u8; 3]) -> Option<Color> {
+        match rgb {
+            [0, 0, 0] => Some(Color::Black),
+            [255, 255, 255] => Some(Color::White),
+            [255, 255, 0] => Some(Color::Yellow),
+            [255, 0, 0] => Some(Color::Red),
+            [0, 0, 255] => Some(Color::Blue),
+            [0, 255, 0] => Some(Color::Green),
+            _ => None,
+        }
+    }
 }
 
 pub struct FrameBuffer {
@@ -68,6 +88,30 @@ impl FrameBuffer {
 
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
+    }
+
+    pub fn from_png(png_bytes: &[u8]) -> Result<Self, EpdError> {
+        let portrait = image::load_from_memory(png_bytes)?.to_rgb8();
+
+        if (portrait.width(), portrait.height()) != (HEIGHT as u32, WIDTH as u32) {
+            return Err(EpdError::WrongImageSize {
+                width: portrait.width(),
+                height: portrait.height(),
+            });
+        }
+
+        let mut frame_buffer = Self::new(Color::White);
+
+        for (x, y, pixel) in portrait.enumerate_pixels() {
+            let color =
+                Color::from_rgb(pixel.0).ok_or(EpdError::NotDithered { x, y, rgb: pixel.0 })?;
+
+            let panel_x = y as usize;
+            let panel_y = (HEIGHT - 1) - x as usize;
+            frame_buffer.set_pixel(panel_x, panel_y, color);
+        }
+
+        Ok(frame_buffer)
     }
 }
 
@@ -172,14 +216,6 @@ impl Epd7in3e {
         Ok(())
     }
 
-    pub fn display(&mut self, frame_buffer: &FrameBuffer) -> Result<(), EpdError> {
-        self.init()?;
-        self.send_command_with_data(0x10, frame_buffer.as_bytes())?;
-        self.turn_on_display()?;
-
-        Ok(())
-    }
-
     fn turn_on_display(&mut self) -> Result<(), EpdError> {
         self.send_command(0x04)?;
         self.wait_until_idle()?;
@@ -192,6 +228,29 @@ impl Epd7in3e {
         self.send_command_with_data(0x02, &[0x00])?;
         self.wait_until_idle()?;
 
+        Ok(())
+    }
+
+    fn deep_sleep(&mut self) -> Result<(), EpdError> {
+        self.send_command_with_data(0x02, &[0x00])?;
+        self.wait_until_idle()?;
+        self.send_command_with_data(0x07, &[0xA5])?;
+
+        sleep(Duration::from_secs(2));
+        Ok(())
+    }
+
+    pub fn display(&mut self, frame_buffer: &FrameBuffer) -> Result<(), EpdError> {
+        self.init()?;
+        self.send_command_with_data(0x10, frame_buffer.as_bytes())?;
+        self.turn_on_display()?;
+        self.deep_sleep()?;
+
+        Ok(())
+    }
+
+    pub fn clear(&mut self, color: Color) -> Result<(), EpdError> {
+        self.display(&FrameBuffer::new(color))?;
         Ok(())
     }
 }

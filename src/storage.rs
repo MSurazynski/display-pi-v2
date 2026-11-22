@@ -2,6 +2,18 @@ use crate::errors::{api_errors::NasaError, image_error::ImageError};
 use crate::types::ImageType;
 use tokio::io::AsyncWriteExt;
 
+fn image_path(image_type: ImageType, date: chrono::NaiveDate) -> std::path::PathBuf {
+    let name = match image_type {
+        ImageType::NasaImage => "nasa".to_string(),
+    };
+
+    let file_name = format!("{}-{}.png", name, date.format("%Y-%m-%d"));
+
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("output")
+        .join(file_name)
+}
+
 pub async fn does_nasa_image_exist(date: &str) -> Result<bool, NasaError> {
     let project_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let output_filename = format!("nasa-{}.png", date);
@@ -11,19 +23,17 @@ pub async fn does_nasa_image_exist(date: &str) -> Result<bool, NasaError> {
 }
 
 pub async fn save_image(image_type: ImageType, image_bytes: Vec<u8>) -> Result<(), ImageError> {
-    let current_date = chrono::Local::now().format("%Y-%m-%d").to_string();
-
-    let project_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-
-    let name = match image_type {
-        ImageType::NasaImage => "nasa".to_string(),
-    };
-
-    let output_filename = format!("{}-{}.png", &name, current_date);
-    let output_path = project_root.join("output").join(output_filename);
-
+    let today = chrono::Local::now().date_naive();
+    let output_path = image_path(image_type, today);
     let mut file = tokio::fs::File::create_new(output_path).await?;
     file.write_all(&image_bytes).await?;
 
     Ok(())
+}
+
+pub async fn load_image(
+    image_type: ImageType,
+    date: chrono::NaiveDate,
+) -> Result<Vec<u8>, ImageError> {
+    Ok(tokio::fs::read(image_path(image_type, date)).await?)
 }

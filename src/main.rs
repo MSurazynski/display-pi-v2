@@ -10,7 +10,7 @@ use std::time::Duration;
 use crate::{
     api::tasks::{fetch_all_tasks, fetch_tasks_due_today},
     epd7in3e::{Color, Epd7in3e, FrameBuffer, HEIGHT, WIDTH},
-    storage::does_nasa_image_exist,
+    storage::{does_nasa_image_exist, load_image},
     types::ImageType,
 };
 use chrono::{Local, Timelike};
@@ -65,66 +65,24 @@ async fn run_nasa_task() {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // let raw_weather_data = fetch_wather().await.unwrap();
-    // let weather_data = parse_weather_data(raw_weather_data).unwrap();
-
-    // render_dashboard_svg();
-
     println!("Started");
-    // run_nasa_task().await;
-    // let client = Client::new();
-    // let todoist_url = "https://api.todoist.com/api/v1/tasks";
-    // let api_key = "82fe982a94f66c098447ac908a0939e505c24dea";
+    run_nasa_task().await;
 
-    const STRIPES: [Color; 6] = [
-        Color::Black,
-        Color::White,
-        Color::Yellow,
-        Color::Red,
-        Color::Blue,
-        Color::Green,
-    ];
-
-    let mut fb = FrameBuffer::new(Color::White);
-    for y in 0..HEIGHT {
-        let color = STRIPES[y * STRIPES.len() / HEIGHT];
-        for x in 0..WIDTH {
-            fb.set_pixel(x, y, color);
-        }
-    }
-    for y in 0..60 {
-        for x in 0..60 {
-            fb.set_pixel(
-                x,
-                y,
-                if x < 10 || y < 10 {
-                    Color::White
-                } else {
-                    Color::Red
-                },
-            );
-        }
-    }
     let mut epd = Epd7in3e::new()?;
+    let fb = FrameBuffer::from_png(
+        &load_image(ImageType::NasaImage, chrono::Local::now().date_naive())
+            .await
+            .unwrap(),
+    )?;
     epd.display(&fb)?;
     Ok(())
 
+    // let raw_weather_data = fetch_wather().await.unwrap();
+    // let weather_data = parse_weather_data(raw_weather_data).unwrap();
+    // render_dashboard_svg();
+    // let todoist_url = "https://api.todoist.com/api/v1/tasks";
+    // let api_key = "82fe982a94f66c098447ac908a0939e505c24dea";
     // fetch_tasks_due_today(&client, todoist_url, api_key)
     //     .await
     //     .unwrap();
-
-    // loop {
-    //     let wait_time = get_duration_till_next_run();
-    //     println!("Next run in {:?} hours", wait_time / 3600);
-    //
-    //     tokio::select! {
-    //         _ = sleep(wait_time) => {
-    //             run_nasa_task().await;
-    //         }
-    //         _ = tokio::signal::ctrl_c() => {
-    //             println!("Shutdown signal received, exiting");
-    //             break;
-    //         }
-    //     }
-    // }
 }
