@@ -7,8 +7,8 @@ pub enum ImageType {
 impl ImageType {
     pub fn as_str(self) -> &'static str {
         match self {
-            ImageType::NasaImage => "nasa",
-            ImageType::Dashboard => "dashboard",
+            ImageType::NasaImage => "Nasa image",
+            ImageType::Dashboard => "Dashboard image",
         }
     }
 }

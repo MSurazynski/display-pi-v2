@@ -27,11 +27,11 @@ pub async fn does_nasa_image_exist(date: &str) -> Result<bool, NasaError> {
 pub async fn save_image(image_type: ImageType, image_bytes: Vec<u8>) -> Result<(), ImageError> {
     let today = chrono::Local::now().date_naive();
     let output_path = image_path(image_type, today);
-    info!("Saving {} in {:?}", image_type.as_str(), &output_path);
 
-    let mut file = tokio::fs::File::create_new(output_path).await?;
+    let mut file = tokio::fs::File::create_new(output_path.clone()).await?;
     file.write_all(&image_bytes).await?;
 
+    info!("{} saved in {:?}", image_type.as_str(), &output_path);
     Ok(())
 }
 

@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 
 use rppal::gpio::{Gpio, InputPin, OutputPin};
 use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
+use tracing::info;
 
 const RESET_GPIO_PIN: u8 = 17;
 const DATA_OR_COMMAND_GPIO_PIN: u8 = 25;
@@ -217,6 +218,7 @@ impl Epd7in3e {
     }
 
     fn turn_on_display(&mut self) -> Result<(), EpdError> {
+        info!("Turning on display");
         self.send_command(0x04)?;
         self.wait_until_idle()?;
 
@@ -241,10 +243,16 @@ impl Epd7in3e {
     }
 
     pub fn display(&mut self, frame_buffer: &FrameBuffer) -> Result<(), EpdError> {
+        info!("Initialize the display");
         self.init()?;
+
+        info!("Starting to display the image");
         self.send_command_with_data(0x10, frame_buffer.as_bytes())?;
         self.turn_on_display()?;
+        info!("Finished displaying the image");
+
         self.deep_sleep()?;
+        info!("Display put to sleep");
 
         Ok(())
     }
