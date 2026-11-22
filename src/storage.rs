@@ -5,6 +5,7 @@ use tokio::io::AsyncWriteExt;
 fn image_path(image_type: ImageType, date: chrono::NaiveDate) -> std::path::PathBuf {
     let name = match image_type {
         ImageType::NasaImage => "nasa".to_string(),
+        ImageType::Dashboard => "dashboard".to_string(),
     };
 
     let file_name = format!("{}-{}.png", name, date.format("%Y-%m-%d"));

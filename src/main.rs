@@ -70,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut epd = Epd7in3e::new()?;
     let fb = FrameBuffer::from_png(
-        &load_image(ImageType::NasaImage, chrono::Local::now().date_naive())
+        &load_image(ImageType::Dashboard, chrono::Local::now().date_naive())
             .await
             .unwrap(),
     )?;
