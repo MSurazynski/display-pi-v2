@@ -7,7 +7,7 @@ use tokio_retry::{
     Retry,
     strategy::{ExponentialBackoff, jitter},
 };
-use tracing::{error, info, instrument};
+use tracing::{error, info, instrument, warn};
 
 #[derive(Debug, Deserialize)]
 pub struct NasaData {
