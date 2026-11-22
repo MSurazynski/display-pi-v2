@@ -3,6 +3,7 @@ pub enum NasaError {
     Request(reqwest::Error),
     NotAnImage,
     ImageAlreadyExisits,
+    NotFound,
     Io(std::io::Error),
 }
 

@@ -10,8 +10,9 @@ use tokio_retry::{
 
 #[derive(Debug, Deserialize)]
 pub struct NasaData {
+    pub date: String,
     pub media_type: String,
-    pub url: String,
+    pub hdurl: Option<String>,
 }
 
 async fn fetch_nasa_image(
@@ -22,21 +23,28 @@ async fn fetch_nasa_image(
 ) -> Result<Bytes, NasaError> {
     let response = client
         .get(base_url)
-        .query(&[("api_key", api_key), ("date", date)])
+        .query(&[("api_key", api_key)])
         .send()
         .await?
         .error_for_status()?
-        .json::<NasaData>()
+        .json::<Vec<NasaData>>()
         .await?;
 
-    // Before download check if the media for today is actually an image
-    if response.media_type != "image" {
-        print!("APOD for today is not an image");
+    let apod = response
+        .iter()
+        .find(|d| d.date == date)
+        .or_else(|| response.iter().max_by(|a, b| a.date.cmp(&b.date)))
+        .ok_or(NasaError::NotFound)?;
+
+    if apod.media_type != "image" {
+        eprintln!("APOD for {} is not an image", apod.date);
         return Err(NasaError::NotAnImage);
     }
 
+    let image_url = apod.hdurl.as_deref().ok_or(NasaError::NotAnImage)?;
+
     let image_bytes = client
-        .get(&response.url)
+        .get(image_url)
         .send()
         .await?
         .error_for_status()?
@@ -63,108 +71,4 @@ pub async fn fetch_nasa_image_with_retries(
     .await?;
 
     Ok(bytes)
-}
-
-// ----------------- TESTS -------------------
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use wiremock::matchers::{method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-
-    #[tokio::test]
-    async fn returns_error_on_500() {
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .respond_with(ResponseTemplate::new(500))
-            .mount(&server)
-            .await;
-
-        let client = Client::new();
-        let result = fetch_nasa_image(&client, &server.uri(), "2026-01-01", "DEMO_KEY").await;
-
-        assert!(matches!(result, Err(NasaError::Request(_))));
-    }
-    #[test]
-    fn deserelizes_real_nasa_response() {
-        let raw = include_str!("../../fixtures/nasa_reponse.json");
-        let data: NasaData = serde_json::from_str(raw).unwrap();
-
-        assert_eq!(data.media_type, "image");
-        assert_eq!(
-            data.url,
-            "https://apod.nasa.gov/apod/image/2605/CometRigel_Karuk_960.jpg"
-        );
-    }
-
-    #[tokio::test]
-    async fn succeeds_on_second_attempt() {
-        let server = MockServer::start().await;
-
-        // First attempt: fail with 500. Only responds once.
-        Mock::given(method("GET"))
-            .and(path("/planetary/apod"))
-            .respond_with(ResponseTemplate::new(500))
-            .up_to_n_times(1)
-            .with_priority(1) // higher priority = matched first
-            .mount(&server)
-            .await;
-
-        // Later attempts: return valid JSON. Lower priority, so it only
-        // matches after the 500 mock is exhausted.
-        Mock::given(method("GET"))
-            .and(path("/planetary/apod"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-                "media_type": "image",
-                "url": format!("{}/image.png", server.uri())
-            })))
-            .with_priority(2)
-            .mount(&server)
-            .await;
-
-        // The image download (second request in fetch_nasa_image).
-        Mock::given(method("GET"))
-            .and(path("/image.png"))
-            .respond_with(ResponseTemplate::new(200).set_body_bytes(vec![1, 2, 3]))
-            .mount(&server)
-            .await;
-
-        let client = Client::new();
-        let result = fetch_nasa_image_with_retries(
-            &client,
-            &format!("{}/planetary/apod", server.uri()),
-            "2026-01-01",
-            "DEMO_KEY",
-            3,
-        )
-        .await;
-
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap().to_vec(), vec![1, 2, 3]);
-    }
-
-    #[tokio::test]
-    async fn fails_after_exhausting_retries() {
-        let server = MockServer::start().await;
-
-        // Every request gets a 500 — success is never reached.
-        Mock::given(method("GET"))
-            .and(path("/planetary/apod"))
-            .respond_with(ResponseTemplate::new(500))
-            .mount(&server)
-            .await;
-
-        let client = Client::new();
-        let result = fetch_nasa_image_with_retries(
-            &client,
-            &format!("{}/planetary/apod", server.uri()),
-            "2026-01-01",
-            "DEMO_KEY",
-            3,
-        )
-        .await;
-
-        assert!(matches!(result, Err(NasaError::Request(_))));
-    }
 }

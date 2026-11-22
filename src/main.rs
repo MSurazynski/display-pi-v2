@@ -1,4 +1,5 @@
 mod api;
+mod epd7in3e;
 mod errors;
 mod parsers;
 mod render;
@@ -43,7 +44,7 @@ fn get_duration_till_next_run() -> Duration {
 async fn run_nasa_task() {
     let client = Client::new();
     let date = chrono::Local::now().format("%Y-%m-%d").to_string();
-    let nasa_url = "https://api.nasa.gov/planetary/apod";
+    let nasa_url = "https://science.nasa.gov/wp-json/wp/v2/apod-basic/";
     let nasa_api_key = "DEMO_KEY";
 
     if does_nasa_image_exist(&date).await.unwrap() {
@@ -69,14 +70,14 @@ async fn main() {
     // render_dashboard_svg();
 
     println!("Started");
-    // run_nasa_task().await;
+    run_nasa_task().await;
     let client = Client::new();
     let todoist_url = "https://api.todoist.com/api/v1/tasks";
     let api_key = "82fe982a94f66c098447ac908a0939e505c24dea";
 
-    fetch_tasks_due_today(&client, todoist_url, api_key)
-        .await
-        .unwrap();
+    // fetch_tasks_due_today(&client, todoist_url, api_key)
+    //     .await
+    //     .unwrap();
 
     // loop {
     //     let wait_time = get_duration_till_next_run();
