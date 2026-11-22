@@ -414,6 +414,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "092966b41edc516079bdf31ec78a2e0588d1d0c08f78b91d8307215928642b2b"
 
 [[package]]
+name = "display-pi-v2"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "chrono",
+ "image",
+ "itertools",
+ "png",
+ "reqwest",
+ "resvg",
+ "rppal",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "time-format",
+ "tiny-skia",
+ "tokio",
+ "tokio-retry",
+ "tracing",
+ "tracing-subscriber",
+ "wiremock",
+]
+
+[[package]]
 name = "displaydoc"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -796,30 +820,6 @@ dependencies = [
  "http",
  "http-body",
  "pin-project-lite",
-]
-
-[[package]]
-name = "http-test"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "chrono",
- "image",
- "itertools",
- "png",
- "reqwest",
- "resvg",
- "rppal",
- "serde",
- "serde_json",
- "thiserror",
- "time-format",
- "tiny-skia",
- "tokio",
- "tokio-retry",
- "tracing",
- "tracing-subscriber",
- "wiremock",
 ]
 
 [[package]]
