@@ -7,7 +7,7 @@ use tokio_retry::{
     Retry,
     strategy::{ExponentialBackoff, jitter},
 };
-use tracing::{instrument, warn};
+use tracing::{error, info, instrument};
 
 #[derive(Debug, Deserialize)]
 pub struct NasaData {
@@ -64,6 +64,7 @@ pub async fn fetch_nasa_image_with_retries(
     api_key: &str,
     retries: usize,
 ) -> Result<Bytes, NasaError> {
+    info!("Starting to fetch NASA image");
     let retry_strategy = ExponentialBackoff::from_millis(10)
         .map(jitter)
         .take(retries);
@@ -73,12 +74,15 @@ pub async fn fetch_nasa_image_with_retries(
         attempt += 1;
         let attempt = attempt;
         async move {
+            info!("Fetching NASA image, attempt = {}", attempt);
             fetch_nasa_image(client, base_url, date, api_key)
                 .await
-                .inspect_err(|e| warn!(attempt, error = %e, "fetch failed"))
+                .inspect_err(|e| error!(attempt, error = %e, "Fetch failed"))
         }
     })
     .await?;
+
+    info!("Finished fetching NASA image");
 
     Ok(bytes)
 }
