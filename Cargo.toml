@@ -19,4 +19,5 @@ time-format = "1.2.2"
 tiny-skia = "0.12.0"
 tokio = { version = "1.52.2", features = ["full"] }
 tokio-retry = "0.3.2"
+tracing = "0.1.44"
 wiremock = "0.6.5"

@@ -1,22 +1,15 @@
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum NasaError {
-    Request(reqwest::Error),
+    #[error("request failed: {0}")]
+    Request(#[from] reqwest::Error),
+    #[error("response is not an image")]
     NotAnImage,
-    ImageAlreadyExisits,
+    #[error("image already exists")]
+    ImageAlreadyExists,
+    #[error("image not found")]
     NotFound,
-    Io(std::io::Error),
-}
-
-impl From<reqwest::Error> for NasaError {
-    fn from(value: reqwest::Error) -> Self {
-        NasaError::Request(value)
-    }
-}
-
-impl From<std::io::Error> for NasaError {
-    fn from(value: std::io::Error) -> Self {
-        NasaError::Io(value)
-    }
+    #[error("io: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 #[derive(Debug)]

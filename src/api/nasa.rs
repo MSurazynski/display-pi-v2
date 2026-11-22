@@ -7,6 +7,7 @@ use tokio_retry::{
     Retry,
     strategy::{ExponentialBackoff, jitter},
 };
+use tracing::{instrument, warn};
 
 #[derive(Debug, Deserialize)]
 pub struct NasaData {
@@ -15,6 +16,7 @@ pub struct NasaData {
     pub hdurl: Option<String>,
 }
 
+#[instrument(skip_all)]
 async fn fetch_nasa_image(
     client: &Client,
     base_url: &str,
@@ -37,7 +39,7 @@ async fn fetch_nasa_image(
         .ok_or(NasaError::NotFound)?;
 
     if apod.media_type != "image" {
-        eprintln!("APOD for {} is not an image", apod.date);
+        warn!("APOD for {} is not an image", apod.date);
         return Err(NasaError::NotAnImage);
     }
 
@@ -54,6 +56,7 @@ async fn fetch_nasa_image(
     Ok(image_bytes)
 }
 
+#[instrument(skip_all)]
 pub async fn fetch_nasa_image_with_retries(
     client: &Client,
     base_url: &str,
@@ -65,8 +68,15 @@ pub async fn fetch_nasa_image_with_retries(
         .map(jitter)
         .take(retries);
 
+    let mut attempt = 0;
     let bytes = Retry::start(retry_strategy, || {
-        fetch_nasa_image(client, base_url, date, api_key)
+        attempt += 1;
+        let attempt = attempt;
+        async move {
+            fetch_nasa_image(client, base_url, date, api_key)
+                .await
+                .inspect_err(|e| warn!(attempt, error = %e, "fetch failed"))
+        }
     })
     .await?;
 
