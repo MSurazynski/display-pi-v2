@@ -45,6 +45,12 @@ async fn run_nasa_task() {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
+        )
+        .init();
+
     info!("Starting");
 
     run_nasa_task().await;
@@ -56,6 +62,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap(),
     )?;
     epd.display(&fb)?;
+
+    info!("Finished");
     Ok(())
 
     // let raw_weather_data = fetch_wather().await.unwrap();
