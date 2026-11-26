@@ -16,7 +16,8 @@ use crate::{
 };
 
 pub async fn make_dashboard() -> Result<(), Box<dyn std::error::Error>> {
-    let root = BitMapBackend::new("output/dashboard.bmp", (480, 800)).into_drawing_area();
+    let root =
+        BitMapBackend::new("output/dashboard-2026-11-26.bmp", (480, 800)).into_drawing_area();
     root.fill(&RGBColor(251, 239, 194))?;
 
     const HEADER_HEIGHT: u32 = 50;
