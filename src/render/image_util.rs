@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use image::ImageReader;
+use image::{DynamicImage, ImageReader};
 use tiny_skia::{IntRect, IntSize, Pixmap, PixmapPaint};
 
 pub fn bytes_to_pixmap(image_bytes: &[u8]) -> Pixmap {
@@ -9,7 +9,10 @@ pub fn bytes_to_pixmap(image_bytes: &[u8]) -> Pixmap {
         .unwrap()
         .decode()
         .unwrap();
+    image_to_pixmap(img)
+}
 
+pub fn image_to_pixmap(img: DynamicImage) -> Pixmap {
     let rgba = img.to_rgba8();
     let width = img.width();
     let height = img.height();

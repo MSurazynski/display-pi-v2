@@ -1,56 +1,57 @@
-use chrono::{Datelike, Local};
+use chrono::Local;
+use image::{DynamicImage, RgbImage};
 use plotters::{
-    backend::{BitMapBackend, DrawingBackend},
+    backend::BitMapBackend,
     drawing::IntoDrawingArea,
-    style::{BLACK, FontStyle, IntoTextStyle, RED, RGBColor, TextStyle},
+    style::{BLACK, FontStyle, IntoTextStyle, RGBColor},
 };
 
 use crate::{
     epd7in3e::{Epd7in3e, FrameBuffer},
     render::{
         dither::{convert_pixmap_to_epaper_pallete, floyd_steinberg},
-        image_util::bytes_to_pixmap,
+        image_util::image_to_pixmap,
     },
-    storage::load_image,
-    types::ImageType,
 };
 
 pub async fn make_dashboard() -> Result<(), Box<dyn std::error::Error>> {
-    let root =
-        BitMapBackend::new("output/dashboard-2026-11-26.bmp", (480, 800)).into_drawing_area();
-    root.fill(&RGBColor(251, 239, 194))?;
+    let mut buf = vec![0u8; (480 * 800 * 3) as usize];
 
-    const HEADER_HEIGHT: u32 = 50;
+    {
+        let root = BitMapBackend::with_buffer(&mut buf, (480, 800)).into_drawing_area();
 
-    let (header_section, root) = root.split_vertically(HEADER_HEIGHT);
+        root.fill(&RGBColor(251, 239, 194))?;
 
-    let now = Local::now();
-    let weekday = now.format("%A");
-    let month = now.format("%B");
-    let day = now.format("%d");
+        const HEADER_HEIGHT: u32 = 50;
 
-    let text_style = ("Yanone Kaffeesatz", 35, FontStyle::Bold)
-        .with_color(BLACK)
-        .into_text_style(&root);
-    let day = format!("Today is {weekday}, {day} {month}");
-    root.draw_text(&day, &text_style, (50, 50)).unwrap();
-    header_section
-        .draw_text(&day, &text_style, (50, 50))
-        .unwrap();
+        let (header_section, root) = root.split_vertically(HEADER_HEIGHT);
 
-    root.present()?;
+        let now = Local::now();
+        let weekday = now.format("%A");
+        let month = now.format("%B");
+        let day = now.format("%d");
 
-    let img = load_image(ImageType::Dashboard, Local::now().date_naive())
-        .await
-        .unwrap();
+        let text_style = ("Yanone Kaffeesatz", 35, FontStyle::Bold)
+            .with_color(BLACK)
+            .into_text_style(&root);
+        let day = format!("Todayyy is {weekday}, {day} {month}");
+        root.draw_text(&day, &text_style, (50, 50)).unwrap();
+        header_section
+            .draw_text(&day, &text_style, (50, 50))
+            .unwrap();
+    }
 
-    let mut img = bytes_to_pixmap(&img);
+    let img = RgbImage::from_raw(480, 800, buf).expect("buffer has wrong size");
+
+    let mut img = image_to_pixmap(DynamicImage::ImageRgb8(img));
     convert_pixmap_to_epaper_pallete(&mut img);
     floyd_steinberg(&mut img);
 
-    let img = img.encode_png()?;
+    let image_bytes = img.encode_png()?;
+    // save_image(ImageType::Dashboard, image_bytes).await;
+
     let mut epd = Epd7in3e::new()?;
-    let fb = FrameBuffer::from_png(&img)?;
+    let fb = FrameBuffer::from_png(&image_bytes)?;
     epd.display(&fb)?;
 
     Ok(())
