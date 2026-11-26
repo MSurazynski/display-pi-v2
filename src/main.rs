@@ -27,8 +27,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     start_logger();
     info!("Starting");
 
-    // run_nasa_task().await;
-    make_dashboard().await?;
+    run_nasa_task().await;
+    // make_dashboard().await?;
 
     info!("Finished");
     Ok(())
