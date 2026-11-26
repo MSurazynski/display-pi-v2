@@ -1,4 +1,5 @@
 mod api;
+mod dashboard;
 mod epd7in3e;
 mod errors;
 mod parsers;
@@ -9,6 +10,7 @@ mod types;
 use crate::{
     api::nasa::run_nasa_task,
     api::tasks::{fetch_all_tasks, fetch_tasks_due_today},
+    dashboard::make_dashboard,
 };
 use tracing::info;
 
@@ -25,7 +27,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     start_logger();
     info!("Starting");
 
-    run_nasa_task().await;
+    // run_nasa_task().await;
+    make_dashboard().await?;
 
     info!("Finished");
     Ok(())

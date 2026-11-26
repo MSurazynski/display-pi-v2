@@ -8,6 +8,7 @@ bytes = "1.12.1"
 chrono = "0.4.44"
 image = "0.25.10"
 itertools = "0.14.0"
+plotters = "0.3.7"
 png = "0.18.1"
 reqwest = { version = "0.13.3", features = ["blocking", "json", "query"] }
 resvg = "0.47.0"
