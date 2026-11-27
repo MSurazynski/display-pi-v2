@@ -16,30 +16,26 @@ fn crop_image_to_largest_multiple(img: &mut DynamicImage) {
     let original_width = img.width() as f32;
     let original_height = img.height() as f32;
 
-    let biggest_height_mul = img.height() as f32 / 800.0_f32;
-    let biggest_width_mul = img.width() as f32 / 480.0_f32;
+    let height_mul = img.height() as f32 / 800.0_f32;
+    let width_mul = img.width() as f32 / 480.0_f32;
 
-    let mut multiplier: f32 = 0_f32;
-    let mut crop_x: f32 = 0_f32;
-    let mut crop_y: f32 = 0_f32;
-    let mut new_width: f32 = 0_f32;
-    let mut new_height: f32 = 0_f32;
-
-    if biggest_width_mul.ge(&biggest_height_mul) {
-        multiplier = biggest_height_mul;
-
-        new_height = 800_f32 * multiplier;
-        new_width = 480_f32 * multiplier;
-
-        crop_x = (original_width / 2_f32) - (new_width / 2_f32);
+    let (crop_x, crop_y, new_width, new_height) = if width_mul.ge(&height_mul) {
+        let multiplier = height_mul;
+        (
+            (original_width / 2_f32) - (480_f32 * multiplier / 2_f32),
+            0_f32,
+            480_f32 * multiplier,
+            800_f32 * multiplier,
+        )
     } else {
-        multiplier = biggest_width_mul;
-
-        new_height = 800_f32 * multiplier;
-        new_width = 480_f32 * multiplier;
-
-        crop_y = (original_height / 2_f32) - (new_height / 2_f32);
-    }
+        let multiplier = width_mul;
+        (
+            0_f32,
+            (original_height / 2_f32) - (800_f32 * multiplier / 2_f32),
+            480_f32 * multiplier,
+            800_f32 * multiplier,
+        )
+    };
 
     let sub_img = image::imageops::crop(
         img,
