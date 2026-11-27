@@ -1,4 +1,5 @@
 use image::{DynamicImage, imageops::FilterType};
+use tracing::{info, instrument};
 
 use crate::render::{
     dither::{convert_pixmap_to_epaper_pallete, floyd_steinberg},
@@ -55,16 +56,23 @@ fn resize_image_to_size(img: &mut DynamicImage) {
     *img = img.resize(480, 800, FilterType::Gaussian)
 }
 
+#[instrument(skip_all)]
 pub async fn process(image_bytes: &mut Vec<u8>) {
-    let mut img = image::load_from_memory(&image_bytes).unwrap();
+    let mut img = image::load_from_memory(image_bytes).unwrap();
 
     rotate_image_to_vertical(&mut img);
+
     crop_image_to_largest_multiple(&mut img);
+    info!("Cropped image");
     resize_image_to_size(&mut img);
+    info!("Resized image");
 
     let mut img = image_to_pixmap(img);
     convert_pixmap_to_epaper_pallete(&mut img);
+    info!("Converted image to epaper pallete");
     floyd_steinberg(&mut img);
+    info!("Applied floyed Steinberg to image");
 
+    info!("Finished processing");
     *image_bytes = img.encode_png().unwrap();
 }
