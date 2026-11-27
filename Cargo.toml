@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 bytes = "1.12.1"
 chrono = "0.4.44"
+clap = { version = "4.6.10", features = ["derive"] }
 image = "0.25.10"
 itertools = "0.14.0"
 plotters = "0.3.7"
