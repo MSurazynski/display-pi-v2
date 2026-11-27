@@ -39,11 +39,14 @@ pub async fn run_nasa_task() {
         .await
         .unwrap();
 
-    let image_bytes = edit_nasa_image(image_bytes).await.unwrap_or_else(|e| {
-        tracing::error!("Failed to edit nasa image: {:?}", e);
-        panic!("Failed to edit nasa image: {:?}", e)
-    });
-    save_image(ImageType::NasaImage, image_bytes).await.unwrap();
+    save_image(ImageType::NasaImage, image_bytes.to_vec())
+        .await
+        .unwrap();
+
+    // let image_bytes = edit_nasa_image(image_bytes).await.unwrap_or_else(|e| {
+    //     tracing::error!("Failed to edit nasa image: {:?}", e);
+    //     panic!("Failed to edit nasa image: {:?}", e)
+    // });
     info!("Nasa image saved");
 
     display_nasa_image().await;
