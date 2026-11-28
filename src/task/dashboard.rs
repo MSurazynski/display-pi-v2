@@ -20,61 +20,58 @@ use crate::{
 
 struct Section<'a> {
     content_area: DrawingArea<BitMapBackend<'a>, Shift>,
-    padding_top_area: DrawingArea<BitMapBackend<'a>, Shift>,
-    padding_bottom_area: DrawingArea<BitMapBackend<'a>, Shift>,
-    name: String,
     height: u32,
-    padding_top: u32,
-    padding_bottom: u32,
+    width: u32,
 }
 
 impl<'a> Section<'a> {
     fn new(
-        name: String,
         height: u32,
         padding_top: u32,
         padding_bottom: u32,
+        padding_left: u32,
+        padding_right: u32,
         free_space: &mut DrawingArea<BitMapBackend<'a>, Shift>,
     ) -> Section<'a> {
-        let (padding_top_area, b) = free_space.split_vertically(padding_top);
-        let (content_area, b) = b.split_vertically(height);
-        let (padding_bottom_area, b) = b.split_vertically(padding_bottom);
+        let width = 480 - padding_left - padding_right;
+        let (content_area, b) = free_space.split_vertically(height + padding_top + padding_bottom);
+        let content_area = content_area.shrink((padding_left, padding_top), (width, height));
+
         let section: Section = Section {
             content_area,
-            padding_top_area,
-            padding_bottom_area,
-            name,
             height,
-            padding_top,
-            padding_bottom,
+            width,
         };
         *free_space = b;
         section
     }
 
     fn draw_line_borders(&self) {
-        let style_margin = RED.stroke_width(1);
         let style_content = GREEN.stroke_width(1);
 
-        let line_margin_top = PathElement::new(vec![(0, 0), (480, 0)], style_margin);
-        let line_margin_bottom = PathElement::new(
-            vec![
-                (0, self.padding_bottom as i32),
-                (480, self.padding_bottom as i32),
-            ],
-            style_margin,
-        );
-
-        let line_content_top = PathElement::new(vec![(0, 0), (480, 0)], style_content);
+        let line_content_top =
+            PathElement::new(vec![(0, 0), (self.width as i32, 0)], style_content);
         let line_content_bottom = PathElement::new(
-            vec![(0, self.height as i32), (480, self.height as i32)],
+            vec![
+                (0, self.height as i32),
+                (self.width as i32, self.height as i32),
+            ],
+            style_content,
+        );
+        let line_content_left =
+            PathElement::new(vec![(0, 0), (0, self.height as i32)], style_content);
+        let line_content_right = PathElement::new(
+            vec![
+                (self.width as i32, 0),
+                (self.width as i32, self.height as i32),
+            ],
             style_content,
         );
 
-        self.padding_top_area.draw(&line_margin_top).unwrap();
         self.content_area.draw(&line_content_top).unwrap();
         self.content_area.draw(&line_content_bottom).unwrap();
-        self.padding_bottom_area.draw(&line_margin_bottom).unwrap();
+        self.content_area.draw(&line_content_left).unwrap();
+        self.content_area.draw(&line_content_right).unwrap();
     }
 
     fn add_header_text(&self) {
@@ -86,9 +83,9 @@ impl<'a> Section<'a> {
         let text_style = ("Yanone Kaffeesatz", 40, FontStyle::Bold)
             .with_color(BLACK)
             .into_text_style(&self.content_area);
-        let day = format!("Today is {weekday}, {day} {month}");
+        let day = format!("{weekday}, {day} {month}");
         self.content_area
-            .draw_text(&day, &text_style, (50, 10))
+            .draw_text(&day, &text_style, (0, 10))
             .unwrap();
     }
 }
@@ -101,17 +98,17 @@ pub async fn run_dashboard_task() {
 
         root.fill(&RGBColor(251, 239, 194)).unwrap();
 
-        let header_section = Section::new("header".to_string(), 50, 50, 15, &mut root);
-        let weather_section = Section::new("weather".to_string(), 200, 15, 15, &mut root);
-        let tasks_section = Section::new("tasks".to_string(), 200, 15, 15, &mut root);
-        let garbage_section = Section::new("tasks".to_string(), 160, 15, 50, &mut root);
+        let day_section = Section::new(50, 50, 15, 50, 50, &mut root);
+        let weather_section = Section::new(200, 15, 15, 50, 50, &mut root);
+        let tasks_section = Section::new(200, 15, 15, 50, 50, &mut root);
+        let garbage_section = Section::new(160, 15, 50, 50, 50, &mut root);
 
-        header_section.draw_line_borders();
+        day_section.draw_line_borders();
         weather_section.draw_line_borders();
         tasks_section.draw_line_borders();
         garbage_section.draw_line_borders();
 
-        header_section.add_header_text();
+        day_section.add_header_text();
     }
 
     let img = RgbImage::from_raw(480, 800, buf).expect("buffer has wrong size");
