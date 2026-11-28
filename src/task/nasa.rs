@@ -6,7 +6,10 @@ use crate::{
     process::nasa::process,
     render::display::display_image_from_memory,
     storage::{does_raw_nasa_image_exist, load_image_from_storage, save_image_to_storage},
-    types::ImageType::{NasaImageProcessed, NasaImageRaw},
+    types::{
+        ImageType::Nasa,
+        Stage::{Processed, Raw},
+    },
 };
 
 #[instrument]
@@ -21,22 +24,24 @@ pub async fn run_nasa_task() {
         .unwrap()
     {
         info!("Nasa image already exists for today");
-        load_image_from_storage(NasaImageRaw, date).await.unwrap()
+        load_image_from_storage(Nasa { stage: Raw }, date)
+            .await
+            .unwrap()
     } else {
         let image_bytes =
             fetch_nasa_image_with_retries(&client, nasa_url, &date.to_string(), nasa_api_key, 3)
                 .await
                 .unwrap();
-        save_image_to_storage(NasaImageRaw, image_bytes.clone())
+        save_image_to_storage(Nasa { stage: Raw }, image_bytes.clone())
             .await
             .unwrap();
         image_bytes
     };
 
     process(&mut image_bytes).await;
-    save_image_to_storage(NasaImageProcessed, image_bytes.clone())
+    save_image_to_storage(Nasa { stage: Processed }, image_bytes.clone())
         .await
         .unwrap();
 
-    display_image_from_memory(NasaImageProcessed, &image_bytes).await;
+    display_image_from_memory(Nasa { stage: Processed }, &image_bytes).await;
 }

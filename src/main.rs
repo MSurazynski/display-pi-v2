@@ -1,5 +1,4 @@
 mod api;
-mod dashboard;
 mod epd7in3e;
 mod errors;
 mod parsers;
@@ -9,7 +8,7 @@ mod storage;
 mod task;
 mod types;
 
-use crate::task::nasa::run_nasa_task;
+use crate::task::{dashboard::run_dashboard_task, nasa::run_nasa_task};
 use clap::{Parser, Subcommand};
 use tracing::info;
 
@@ -83,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             today,
             tomorrow,
         } => {
-            todo!();
+            run_dashboard_task().await;
         }
         Command::DisplayMyPicture => {
             todo!()

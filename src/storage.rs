@@ -1,5 +1,6 @@
 use crate::errors::{api_errors::NasaError, image_error::ImageError};
-use crate::types::ImageType::{self, NasaImageRaw};
+use crate::types::ImageType::{self};
+use crate::types::Stage::Raw;
 use tokio::io::AsyncWriteExt;
 use tracing::info;
 
@@ -12,7 +13,7 @@ pub fn image_path(image_type: ImageType, date: chrono::NaiveDate) -> std::path::
 }
 
 pub async fn does_raw_nasa_image_exist(date: chrono::NaiveDate) -> Result<bool, NasaError> {
-    let path = image_path(NasaImageRaw, date);
+    let path = image_path(ImageType::Nasa { stage: Raw }, date);
     Ok(tokio::fs::try_exists(&path).await?)
 }
 
